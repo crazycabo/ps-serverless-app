@@ -4,4 +4,4 @@ import * as cdk from '@aws-cdk/core';
 import { ApplicationStack } from '../lib/core';
 
 const app = new cdk.App();
-new ApplicationStack(app, 'buraeonsumisusutakku');
+new ApplicationStack(app, 'poc-doc-service-cobra');
