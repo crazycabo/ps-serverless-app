@@ -28,6 +28,64 @@ const dynamoDB = () => {
   return _dynamoDB;
 };
 
+let _s3;
+
+/**
+ * Create Amazon S3 client for use in the application.
+ *
+ * @returns {object} Amazon S3 client
+ */
+const s3 = () => {
+  if (!_s3) {
+    _s3 = new AWS.S3();
+  }
+
+  return _s3;
+};
+
+let _textract;
+
+/**
+ * Create Textract client for use in the application.
+ *
+ * @returns {object} Textract client
+ */
+const textract = () => {
+  if(!_textract) {
+    _textract = new AWS.Textract();
+  }
+};
+
+let _ses;
+
+/**
+ * Create Simple Email Service (SES) client for use in the application.
+ *
+ * @returns {object} Simple Email Service client
+ */
+const ses = () => {
+  if(!_ses) {
+    _ses = new AWS.SES();
+  }
+};
+
+let _eventBridge;
+
+/**
+ * Create EventBridge client for use in the application.
+ *
+ * @returns {object} EventBridge client
+ */
+const eventBridge = () => {
+  if(!_eventBridge) {
+    _eventBridge = new AWS.EventBridge();
+  }
+};
+
 export const AWSClients = {
   dynamoDB,
+  s3,
+  textract,
+  ses,
+  eventBridge,
 };
