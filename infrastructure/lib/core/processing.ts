@@ -39,5 +39,75 @@ export class DocumentProcessing extends cdk.Construct {
             lambdaFunction: getDocumentMetadata,
             outputPath: '$.Payload',
         });
+
+        // Thumbnail Service --------------------------------------------------------
+
+        const createThumbnail = new NodejsServiceFunction(this, 'ThumbnailLambda', {
+            entry: path.join(__dirname, '../../../services/processing/thumbnail.js'),
+            timeout: cdk.Duration.seconds(120),
+            layers: [
+                lambda.LayerVersion.fromLayerVersionAttributes(this, 'GhostscriptLayerVersion', {
+                    layerVersionArn: 'arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:8',
+                    compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
+                }),
+            ],
+        });
+
+        createThumbnail.addEnvironment('UPLOAD_BUCKET', props.uploadBucket.bucketName);
+        createThumbnail.addEnvironment('ASSET_BUCKET', props.assetBucket.bucketName);
+
+        props.uploadBucket.grantRead(createThumbnail);
+        props.assetBucket.grantWrite(createThumbnail);
+
+        const createThumbnailInvoke = new tasks.LambdaInvoke(this, 'Create Document Thumbnail', {
+            lambdaFunction: createThumbnail,
+            outputPath: '$.Payload',
+        });
+
+        // Start Text Detection Service ---------------------------------------------
+
+        const startTextDetection = new NodejsServiceFunction(this, 'StartTextDetectionLambda', {
+            entry: path.join(__dirname, '../../../services/processing/startTextDetection.js'),
+        });
+
+        startTextDetection.addEnvironment('UPLOAD_BUCKET', props.uploadBucket.bucketName);
+        startTextDetection.addToRolePolicy(
+            new iam.PolicyStatement({
+                resources: ['*'],
+                actions: ['textract:StartDocumentTextDetection'],
+            }),
+        );
+
+        props.uploadBucket.grantReadWrite(startTextDetection);
+
+        const startTextDetectionInvoke = new tasks.LambdaInvoke(this, 'Start Text Detection Process', {
+            lambdaFunction: startTextDetection,
+            outputPath: '$.Payload',
+        });
+
+        // Get Text Detection Results Service ---------------------------------------
+
+        const getTextDetectionResults = new NodejsServiceFunction(this, 'GetTextDetectionLambda', {
+            entry: path.join(__dirname, '../../../services/processing/parseTextDetectionResults.js'),
+            timeout: cdk.Duration.seconds(300),
+        });
+
+        getTextDetectionResults.addToRolePolicy(
+            new iam.PolicyStatement({
+                resources: ['*'],
+                actions: ['textract:GetDocumentTextDetection'],
+            }),
+        );
+
+        const getTextDetectionResultsInvoke = new tasks.LambdaInvoke(this, 'Get Text Detection Results', {
+            lambdaFunction: getTextDetectionResults,
+            outputPath: '$.Payload',
+        });
+
+        getTextDetectionResultsInvoke.addRetry({
+            maxAttempts: 100,
+            interval: cdk.Duration.seconds(5),
+            backoffRate: 2,
+        });
     }
 }
