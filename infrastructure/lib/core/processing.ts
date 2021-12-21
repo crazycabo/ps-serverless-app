@@ -109,5 +109,30 @@ export class DocumentProcessing extends cdk.Construct {
             interval: cdk.Duration.seconds(5),
             backoffRate: 2,
         });
+
+        // Insert Document into DB --------------------------------------------------
+
+        const insertDocument = new NodejsServiceFunction(this, 'InsertDocumentLambda', {
+            entry: path.join(__dirname, '../../../services/processing/insert.js'),
+        });
+
+        insertDocument.addEnvironment('DYNAMO_DB_TABLE', props.documentsTable.tableName);
+        insertDocument.addEnvironment('UPLOAD_BUCKET', props.uploadBucket.bucketName);
+        insertDocument.addEnvironment('ASSET_BUCKET', props.assetBucket.bucketName);
+
+        props.uploadBucket.grantReadWrite(insertDocument);
+        props.assetBucket.grantReadWrite(insertDocument);
+
+        insertDocument.addToRolePolicy(
+            new iam.PolicyStatement({
+                resources: [props.documentsTable.tableArn],
+                actions: ['dynamodb:UpdateItem'],
+            }),
+        );
+
+        const insertDocumentInvoke = new tasks.LambdaInvoke(this, 'Insert Document into Database', {
+            lambdaFunction: insertDocument,
+            outputPath: '$.Payload',
+        });
     }
 }
