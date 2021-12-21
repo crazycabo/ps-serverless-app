@@ -14,11 +14,14 @@ export class ApplicationStack extends cdk.Stack {
     const database = new AppDatabase(this, 'Database');
 
     const services = new AppServices(this, 'Services', {
-      documentsTable: database.documentsTable
+      documentsTable: database.documentsTable,
+      uploadBucket: storage.uploadBucket,
+      assetBucket: storage.assetBucket,
     });
 
     const api = new ApplicationAPI(this, 'API', {
-      commentsService: services.commentsService
+      commentsService: services.commentsService,
+      documentsService: services.documentsService,
     });
 
     new WebApp(this, 'WebApp', {
