@@ -47,7 +47,7 @@ export class DocumentProcessing extends cdk.Construct {
             timeout: cdk.Duration.seconds(120),
             layers: [
                 lambda.LayerVersion.fromLayerVersionAttributes(this, 'GhostscriptLayerVersion', {
-                    layerVersionArn: 'arn:aws:lambda:us-east-2:764866452798:layer:ghostscript:8',
+                    layerVersionArn: 'arn:aws:lambda:us-east-1:764866452798:layer:ghostscript:8',
                     compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
                 }),
             ],
