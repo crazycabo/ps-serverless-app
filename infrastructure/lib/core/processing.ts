@@ -134,5 +134,47 @@ export class DocumentProcessing extends cdk.Construct {
             lambdaFunction: insertDocument,
             outputPath: '$.Payload',
         });
+
+        // Text Detection Process --------------------------------------------
+
+        const waitStep = new sfn.Wait(this, 'WaitStep', {
+            time: sfn.WaitTime.duration(cdk.Duration.seconds(60)),
+            comment: 'Wait before checking for text detection',
+        });
+
+        const pass = new sfn.Pass(this, 'PassStep', {
+            inputPath: '$',
+            outputPath: '$',
+        });
+
+        const isTextDetectionCompletedChoice = new sfn.Choice(this, 'Has Text Detection Completed', {});
+
+        isTextDetectionCompletedChoice
+            .when(sfn.Condition.stringEquals('$.textDetection.jobStatus', 'SUCCEEDED'), pass)
+            .otherwise(waitStep);
+
+        startTextDetectionInvoke.next(waitStep);
+
+        waitStep.next(getTextDetectionResultsInvoke);
+
+        getTextDetectionResultsInvoke.next(isTextDetectionCompletedChoice);
+
+        // Parallel Step -----------------------------------------------------
+
+        const parallelProcessing = new sfn.Parallel(this, 'ParallelProcessing');
+
+        parallelProcessing.branch(createThumbnailInvoke);
+        parallelProcessing.branch(startTextDetectionInvoke);
+
+        // Create Step Function ----------------------------------------------
+
+        const stepFunctionDefinition = getDocumentMetadataInvoke
+            .next(parallelProcessing)
+            .next(insertDocumentInvoke);
+
+        this.processingStateMachine = new sfn.StateMachine(this, 'ProcessingStateMachine', {
+            definition: stepFunctionDefinition,
+            timeout: cdk.Duration.minutes(30),
+        });
     }
 }
