@@ -8,6 +8,7 @@ import * as lambda from '@aws-cdk/aws-lambda';
 interface ApplicationEventsProps {
     processingStateMachine: sfn.IStateMachine;
     uploadBucket: s3.IBucket;
+    notificationsService: lambda.IFunction;
 }
 
 export class ApplicationEvents extends cdk.Construct {
@@ -21,5 +22,24 @@ export class ApplicationEvents extends cdk.Construct {
         const stateMachineTarget = new targets.SfnStateMachine(props.processingStateMachine, {});
 
         uploadRule.addTarget(stateMachineTarget);
+
+        // Custom Event Bus for App ------------------------------------------
+
+        const bus = new events.EventBus(this, 'AppEventBus', {
+            eventBusName: 'com.globomantics.dms',
+        });
+
+        const commentAddedRule = new events.Rule(this, 'CommentAddedRule', {
+            eventBus: bus,
+            enabled: true,
+            description: 'When a new comment is added to a document',
+            eventPattern: {
+                source: ['com.globomantics.dms.comments'],
+                detailType: ['CommentAdded'],
+            },
+            ruleName: 'CommentAddedRule',
+        });
+
+        commentAddedRule.addTarget(new targets.LambdaFunction(props.notificationsService));
     }
 }
