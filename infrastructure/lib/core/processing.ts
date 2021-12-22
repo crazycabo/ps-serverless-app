@@ -135,6 +135,37 @@ export class DocumentProcessing extends cdk.Construct {
             outputPath: '$.Payload',
         });
 
+        // Failure Step -------------------------------------------------------------
+
+        const catchError = new NodejsServiceFunction(this, 'CatchErrorLambda', {
+            entry: path.join(__dirname, '../../../services/processing/catchError.js'),
+        });
+
+        catchError.addEnvironment('DYNAMO_DB_TABLE', props.documentsTable.tableName);
+        catchError.addEnvironment('UPLOAD_BUCKET', props.uploadBucket.bucketName);
+        catchError.addEnvironment('ASSET_BUCKET', props.assetBucket.bucketName);
+
+        props.uploadBucket.grantReadWrite(catchError);
+        props.assetBucket.grantReadWrite(catchError);
+
+        catchError.addToRolePolicy(
+            new iam.PolicyStatement({
+                resources: [props.documentsTable.tableArn],
+                actions: ['dynamodb:DeleteItem', 'dynamodb:Query'],
+            }),
+        );
+
+        catchError.addToRolePolicy(
+            new iam.PolicyStatement({
+                resources: ['*'],
+                actions: ['events:PutEvents'],
+            }),
+        );
+
+        const catchErrorInvoke = new tasks.LambdaInvoke(this, 'Unable to process - Rollback all data', {
+            lambdaFunction: catchError,
+        });
+
         // Text Detection Process --------------------------------------------
 
         const waitStep = new sfn.Wait(this, 'WaitStep', {
@@ -165,6 +196,16 @@ export class DocumentProcessing extends cdk.Construct {
 
         parallelProcessing.branch(createThumbnailInvoke);
         parallelProcessing.branch(startTextDetectionInvoke);
+
+        // Add catches (in case of error or failure) -------------------------
+
+        const catchProps: sfn.CatchProps = {
+            resultPath: '$.error',
+        };
+
+        getDocumentMetadataInvoke.addCatch(catchErrorInvoke, catchProps);
+        parallelProcessing.addCatch(catchErrorInvoke, catchProps);
+        insertDocumentInvoke.addCatch(catchErrorInvoke, catchProps);
 
         // Create Step Function ----------------------------------------------
 

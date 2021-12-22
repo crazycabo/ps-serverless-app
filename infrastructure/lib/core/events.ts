@@ -29,6 +29,19 @@ export class ApplicationEvents extends cdk.Construct {
             eventBusName: 'com.globomantics.dms',
         });
 
+        const failedProcessingRule = new events.Rule(this, 'FailedProcessingRule', {
+            eventBus: bus,
+            enabled: true,
+            description: 'When a PDF file fails processing',
+            eventPattern: {
+                source: ['com.globomantics.dms.processing'],
+                detailType: ['ProcessingFailed'],
+            },
+            ruleName: 'ProcessingFailedRule',
+        });
+
+        failedProcessingRule.addTarget(new targets.LambdaFunction(props.notificationsService));
+
         const commentAddedRule = new events.Rule(this, 'CommentAddedRule', {
             eventBus: bus,
             enabled: true,
