@@ -32,7 +32,7 @@ export const uploadDocument = async (name, tags, file) => {
   formData.append('tags', tags.join(','));
   formData.append('file', file);
 
-  const result = await axios.post(`${SERVICES_HOST}/documents`, formData);
+  const result = await axios.post(`${SERVICES_HOST}/documents/`, formData);
 
   console.log(`Result from Upload: ${JSON.stringify(result)}`);
 };
@@ -89,7 +89,7 @@ export const reportCommentForModeration = async (id) => {
   const body = {
     CommentId: id,
   };
-  await axios.post(`${SERVICES_HOST}/moderate`, body);
+  await axios.post(`${SERVICES_HOST}/moderate/`, body);
 };
 
 /* eslint-enable no-console */
