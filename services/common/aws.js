@@ -54,6 +54,8 @@ const textract = () => {
   if(!_textract) {
     _textract = new AWS.Textract();
   }
+
+  return _textract;
 };
 
 let _ses;
@@ -67,6 +69,8 @@ const ses = () => {
   if(!_ses) {
     _ses = new AWS.SES();
   }
+
+  return _ses;
 };
 
 let _eventBridge;
@@ -80,6 +84,8 @@ const eventBridge = () => {
   if(!_eventBridge) {
     _eventBridge = new AWS.EventBridge();
   }
+
+  return _eventBridge;
 };
 
 export const AWSClients = {
