@@ -23,6 +23,7 @@ import { AWSClients, generateID } from '../common';
 // Utilize the DynamoDB Document Client
 const dynamoDB = AWSClients.dynamoDB();
 const tableName = process.env.DYNAMO_DB_TABLE;
+const eventBridge = AWSClients.eventBridge();
 
 // JSON schemas used to validate requests to the service calls
 const schemas = {
@@ -65,7 +66,28 @@ const createComment = async (request, response) => {
     Item: item,
     ReturnValues: 'NONE',
   };
+
   await dynamoDB.put(params).promise();
+
+  // Send comment event using event bridge, to connect into this event for notifications
+  const detail = {
+    documentId: request.pathVariables.docid,
+    commentId,
+  };
+  const eventParams = {
+    Entries: [
+      {
+        Detail: JSON.stringify(detail),
+        DetailType: 'CommentAdded',
+        EventBusName: 'com.globomantics.dms',
+        Resources: [],
+        Source: 'com.globomantics.dms.comments',
+      },
+    ],
+  };
+
+  await eventbridge.putEvents(eventParams).promise();
+
   return response.output(item, 200);
 };
 
@@ -78,7 +100,9 @@ const deleteComment = async (request, response) => {
       SK: `Comment#${request.pathVariables.commentid}`,
     },
   };
+
   await dynamoDB.delete(params).promise();
+
   return response.output({}, 200);
 };
 

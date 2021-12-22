@@ -3,6 +3,8 @@ import { ApplicationAPI } from './api';
 import { AppDatabase } from './database';
 import { AppServices } from './services';
 import { AssetStorage } from './storage';
+import { ApplicationEvents } from "./events";
+import { DocumentProcessing } from "./processing";
 import { WebApp } from './webapp';
 
 export class ApplicationStack extends cdk.Stack {
@@ -10,15 +12,29 @@ export class ApplicationStack extends cdk.Stack {
     super(scope, id, props);
 
     const storage = new AssetStorage(this, 'Storage');
-
     const database = new AppDatabase(this, 'Database');
 
     const services = new AppServices(this, 'Services', {
-      documentsTable: database.documentsTable
+      documentsTable: database.documentsTable,
+      uploadBucket: storage.uploadBucket,
+      assetBucket: storage.assetBucket,
     });
 
     const api = new ApplicationAPI(this, 'API', {
-      commentsService: services.commentsService
+      commentsService: services.commentsService,
+      documentsService: services.documentsService,
+    });
+
+    const processing = new DocumentProcessing(this, 'Processing', {
+      uploadBucket: storage.uploadBucket,
+      assetBucket: storage.assetBucket,
+      documentsTable: database.documentsTable,
+    });
+
+    new ApplicationEvents(this, 'Events', {
+      uploadBucket: storage.uploadBucket,
+      processingStateMachine: processing.processingStateMachine,
+      notificationsService: services.notificationsService,
     });
 
     new WebApp(this, 'WebApp', {
