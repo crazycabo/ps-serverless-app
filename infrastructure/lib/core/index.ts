@@ -4,6 +4,7 @@ import { AppDatabase } from './database';
 import { AppServices } from './services';
 import { AssetStorage } from './storage';
 import { ApplicationEvents } from "./events";
+import { ApplicationAuth } from "./auth";
 import { DocumentProcessing } from "./processing";
 import { WebApp } from './webapp';
 
@@ -13,6 +14,8 @@ export class ApplicationStack extends cdk.Stack {
 
     const storage = new AssetStorage(this, 'Storage');
     const database = new AppDatabase(this, 'Database');
+
+    new ApplicationAuth(this, 'Auth');
 
     const services = new AppServices(this, 'Services', {
       documentsTable: database.documentsTable,
