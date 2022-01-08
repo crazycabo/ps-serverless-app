@@ -11,35 +11,34 @@ Amplify.configure(window.appConfig);
 const helmetContext = {};
 
 function App() {
+  const [authState, setAuthState] = React.useState();
+  const [user, setUser] = React.useState();
 
-    const [authState, setAuthState] = React.useState();
-    const [user, setUser] = React.useState();
+  React.useEffect(() => onAuthUIStateChange((nextAuthState, authData) => {
+    setAuthState(nextAuthState);
+    setUser(authData);
+  }), []);
 
-    React.useEffect(() => onAuthUIStateChange((nextAuthState, authData) => {
-        setAuthState(nextAuthState);
-        setUser(authData);
-    }), []);
-
-    return (
-        <HelmetProvider context={helmetContext}>
-            <Helmet
-            titleTemplate="%s | Globomantics"
-            defaultTitle="Document Management System"
-            />
-            { authState === AuthState.SignedIn && user ? (
-                <Routes />
-            ) : (
-                <AmplifyAuthenticator>
-                    <AmplifySignIn
-                        slot="sign-in"
-                        usernameAlias="email"
-                        headerText="Document Management System"
-                        hideSignUp
-                    />
-                </AmplifyAuthenticator>
-            )}
-        </HelmetProvider>
-    );
+  return (
+    <HelmetProvider context={helmetContext}>
+      <Helmet
+        titleTemplate="%s | Globomantics"
+        defaultTitle="Document Management System"
+      />
+      { authState === AuthState.SignedIn && user ? (
+        <Routes />
+      ) : (
+        <AmplifyAuthenticator>
+          <AmplifySignIn
+            slot="sign-in"
+            usernameAlias="email"
+            headerText="Document Management System"
+            hideSignUp
+          />
+        </AmplifyAuthenticator>
+      )}
+    </HelmetProvider>
+  );
 }
 
 export default App;
