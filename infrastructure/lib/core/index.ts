@@ -14,8 +14,7 @@ export class ApplicationStack extends cdk.Stack {
 
     const storage = new AssetStorage(this, 'Storage');
     const database = new AppDatabase(this, 'Database');
-
-    new ApplicationAuth(this, 'Auth');
+    const auth = new ApplicationAuth(this, 'Auth');
 
     const services = new AppServices(this, 'Services', {
       documentsTable: database.documentsTable,
@@ -44,7 +43,9 @@ export class ApplicationStack extends cdk.Stack {
       hostingBucket: storage.hostingBucket,
       baseDirectory: '../',
       relativeWebAppPath: 'webapp',
-      httpApi: api.httpApi
+      httpApi: api.httpApi,
+      userPool: auth.userPool,
+      userPoolClient: auth.userPoolClient,
     });
   }
 }
