@@ -1,10 +1,10 @@
 import React from 'react';
+import Amplify from 'aws-amplify';
 import './App.css';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
-import Routes from './Routes';
-import Amplify from 'aws-amplify';
 import { AmplifyAuthenticator, AmplifySignIn } from '@aws-amplify/ui-react';
 import { AuthState, onAuthUIStateChange } from '@aws-amplify/ui-components';
+import Routes from './Routes';
 
 Amplify.configure(window.appConfig);
 
