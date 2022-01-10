@@ -1,20 +1,56 @@
 import axios from 'axios';
+import createAuthRefreshInterceptor from 'axios-auth-refresh';
+import {Auth} from 'aws-amplify';
 import * as mock from './mockData';
 
 const SERVICES_HOST = window.appConfig.apiEndpoint;
+let client;
 
 /* eslint-disable no-console */
+
+const getAuthHeader = (session) => `Bearer ${session.getAccessToken().getJwtToken()}`;
+
+// Handle token refreshing
+const createAPIClient = async () => {
+  console.log('Creating API Client');
+  const session = await Auth.currentSession();
+
+  client = axios.create({
+    headers: {
+      common: {
+        Authorization: getAuthHeader(session),
+      },
+    },
+  });
+
+  createAuthRefreshInterceptor(client, async (request) => {
+    // Recreate client and update for future requests
+    await createAPIClient();
+    const newSession = await Auth.currentSession();
+
+    // Update the Auth header for current request
+    request.response.config.headers.Authorization = getAuthHeader(newSession);
+  });
+};
 
 // Documents ---------------------------------------------------------
 
 export const getAllDocuments = async () => {
-  const { data } = await axios.get(`${SERVICES_HOST}/documents/`);
+  if (!client) {
+    await createAPIClient();
+  }
+
+  const { data } = await client.get(`${SERVICES_HOST}/documents/`);
 
   return data;
 };
 
 export const getDocument = async (id) => {
-  const { data } = await axios.get(`${SERVICES_HOST}/documents/${id}`);
+  if (!client) {
+    await createAPIClient();
+  }
+
+  const { data } = await client.get(`${SERVICES_HOST}/documents/${id}`);
 
   console.log(`Data: ${JSON.stringify(data)}`);
 
@@ -22,17 +58,25 @@ export const getDocument = async (id) => {
 };
 
 export const deleteDocument = async (id) => {
-  await axios.delete(`${SERVICES_HOST}/documents/${id}`);
+  if (!client) {
+    await createAPIClient();
+  }
+
+  await client.delete(`${SERVICES_HOST}/documents/${id}`);
 };
 
 export const uploadDocument = async (name, tags, file) => {
+  if (!client) {
+    await createAPIClient();
+  }
+
   const formData = new FormData();
 
   formData.append('name', name);
   formData.append('tags', tags.join(','));
   formData.append('file', file);
 
-  const result = await axios.post(`${SERVICES_HOST}/documents/`, formData);
+  const result = await client.post(`${SERVICES_HOST}/documents/`, formData);
 
   console.log(`Result from Upload: ${JSON.stringify(result)}`);
 };
@@ -72,24 +116,39 @@ export const updateCurrentUserProfile = async (name, shouldDeletePicture, pictur
 // Comments --------------------------------------------------------------
 
 export const createComment = async (id, content) => {
+  if (!client) {
+    await createAPIClient();
+  }
+
   const body = {
     Comment: content,
   };
-  const results = await axios.post(`${SERVICES_HOST}/comments/${id}`, body);
+
+  const results = await client.post(`${SERVICES_HOST}/comments/${id}`, body);
+
   console.log(`Results: ${JSON.stringify(results)}`);
 };
 
 export const getCommentsForDocument = async (id) => {
-  const results = await axios.get(`${SERVICES_HOST}/comments/${id}`);
-  const sortedResults = results.data.sort((a, b) => new Date(b.DateAdded) - new Date(a.DateAdded));
-  return sortedResults;
+  if (!client) {
+    await createAPIClient();
+  }
+
+  const results = await client.get(`${SERVICES_HOST}/comments/${id}`);
+
+  return results.data.sort((a, b) => new Date(b.DateAdded) - new Date(a.DateAdded));
 };
 
 export const reportCommentForModeration = async (id) => {
+  if (!client) {
+    await createAPIClient();
+  }
+
   const body = {
     CommentId: id,
   };
-  await axios.post(`${SERVICES_HOST}/moderate/`, body);
+
+  await client.post(`${SERVICES_HOST}/moderate/`, body);
 };
 
 /* eslint-enable no-console */
