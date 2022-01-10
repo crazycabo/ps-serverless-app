@@ -25,6 +25,8 @@ export class ApplicationStack extends cdk.Stack {
     const api = new ApplicationAPI(this, 'API', {
       commentsService: services.commentsService,
       documentsService: services.documentsService,
+      userPool: auth.userPool,
+      userPoolClient: auth.userPoolClient,
     });
 
     const processing = new DocumentProcessing(this, 'Processing', {
