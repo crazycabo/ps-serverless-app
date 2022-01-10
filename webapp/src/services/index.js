@@ -116,6 +116,10 @@ export const updateCurrentUserProfile = async (name, shouldDeletePicture, pictur
 // Comments --------------------------------------------------------------
 
 export const createComment = async (id, content) => {
+  if (!id) {
+    throw new Error('Must have document ID');
+  }
+
   if (!client) {
     await createAPIClient();
   }
