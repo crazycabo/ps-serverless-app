@@ -1,6 +1,6 @@
 import axios from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
-import {Auth} from 'aws-amplify';
+import { Auth } from 'aws-amplify';
 import * as mock from './mockData';
 
 const SERVICES_HOST = window.appConfig.apiEndpoint;
