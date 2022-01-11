@@ -9,14 +9,15 @@
 import * as path from 'path';
 import * as url from 'url';
 import {
-    validatePathVariables,
-    validateMultipartFormData,
-    parseMultipartFormData,
-    createRouter,
-    RouterType,
-    Matcher,
-} from "lambda-micro";
-import { AWSClients, generateID } from "@ps-serverless/services-common";
+  validatePathVariables,
+  validateMultipartFormData,
+  parseMultipartFormData,
+  createRouter,
+  RouterType,
+  Matcher,
+  enforceGroupMembership,
+} from 'lambda-micro';
+import { AWSClients, generateID } from '@ps-serverless/services-common';
 
 // Setup S# Client
 const s3 = AWSClients.s3();
@@ -26,8 +27,8 @@ const dynamoDB = AWSClients.dynamoDB();
 const tableName = process.env.DYNAMO_DB_TABLE;
 
 const schemas = {
-    idPathVariable: require('./schemas/idPathVariable.json'),
-    createDocument: require('./schemas/createDocument.json'),
+  idPathVariable: require('./schemas/idPathVariable.json'),
+  createDocument: require('./schemas/createDocument.json'),
 };
 
 //-------------------------
@@ -41,40 +42,40 @@ const schemas = {
  * @returns {*}
  */
 const generateDeleteRequestsForItems = items => {
-    return items.map(item => {
-        return {
-            DeleteRequest: {
-                Key: {
-                    PK: item.PK,
-                    SK: item.SK,
-                },
-            },
-        };
-    });
+  return items.map(item => {
+    return {
+      DeleteRequest: {
+        Key: {
+          PK: item.PK,
+          SK: item.SK,
+        },
+      },
+    };
+  });
 };
 
 const uploadFileToS3 = async (id, formFile) => {
-    const params = {
-        Bucket: process.env.UPLOAD_BUCKET,
-        Key: `${id}.pdf`,
-        Body: formFile.content,
-        ContentType: formFile.contentType,
-    };
+  const params = {
+    Bucket: process.env.UPLOAD_BUCKET,
+    Key: `${id}.pdf`,
+    Body: formFile.content,
+    ContentType: formFile.contentType,
+  };
 
-    return s3.upload(params).promise();
+  return s3.upload(params).promise();
 };
 
 const createSignedS3URL = async unsignedURL => {
-    const urlExpirySeconds = 300;
-    const parsedURL = url.parse(unsignedURL);
-    const filename = path.basename(parsedURL.pathname);
-    const params = {
-        Bucket: process.env.ASSET_BUCKET,
-        Key: filename,
-        Expires: urlExpirySeconds,
-    };
+  const urlExpirySeconds = 300;
+  const parsedURL = url.parse(unsignedURL);
+  const filename = path.basename(parsedURL.pathname);
+  const params = {
+    Bucket: process.env.ASSET_BUCKET,
+    Key: filename,
+    Expires: urlExpirySeconds,
+  };
 
-    return await s3.getSignedUrlPromise('getObject', params);
+  return s3.getSignedUrlPromise('getObject', params);
 };
 
 //-------------------------
@@ -82,97 +83,97 @@ const createSignedS3URL = async unsignedURL => {
 //-------------------------
 
 const getAllDocuments = async (request, response) => {
-    const params = {
-        TableName: tableName,
-        IndexName: 'GSI1',
-        KeyConditionExpression: 'SK = :key ',
-        ExpressionAttributeValues: {
-            ':key': 'Doc#Marketing',
-        },
-    };
+  const params = {
+    TableName: tableName,
+    IndexName: 'GSI1',
+    KeyConditionExpression: 'SK = :key ',
+    ExpressionAttributeValues: {
+      ':key': 'Doc#Marketing',
+    },
+  };
 
-    const results = await dynamoDB.query(params).promise();
+  const results = await dynamoDB.query(params).promise();
 
-    return response.output(results.Items, 200);
+  return response.output(results.Items, 200);
 };
 
 // Get a single document based on the path variable.
 const getDocument = async (request, response) => {
-    const params = {
-        TableName: tableName,
-        KeyConditionExpression: 'PK = :key AND begins_with(SK, :prefix)',
-        ExpressionAttributeValues: {
-            ':key': request.pathVariables.id,
-            ':prefix': 'Doc',
-        },
-    };
+  const params = {
+    TableName: tableName,
+    KeyConditionExpression: 'PK = :key AND begins_with(SK, :prefix)',
+    ExpressionAttributeValues: {
+      ':key': request.pathVariables.id,
+      ':prefix': 'Doc',
+    },
+  };
 
-    const results = await dynamoDB.query(params).promise();
-    const document = results.Items[0];
+  const results = await dynamoDB.query(params).promise();
+  const document = results.Items[0];
 
-    document.Thumbnail = await createSignedS3URL(document.Thumbnail);
-    document.Document = await createSignedS3URL(document.Document);
+  document.Thumbnail = await createSignedS3URL(document.Thumbnail);
+  document.Document = await createSignedS3URL(document.Document);
 
-    return response.output(document, 200);
+  return response.output(document, 200);
 };
 
 // Delete document and anything attached to it.
 const deleteDocument = async (request, response) => {
-    const params = {
-        TableName: tableName,
-        KeyConditionExpression: 'PK = :key',
-        ExpressionAttributeValues: {
-            ':key': request.pathVariables.id,
-        },
-    };
+  const params = {
+    TableName: tableName,
+    KeyConditionExpression: 'PK = :key',
+    ExpressionAttributeValues: {
+      ':key': request.pathVariables.id,
+    },
+  };
 
-    const allValues = await dynamoDB.query(params).promise();
-    const batchParams = {
-        RequestItems: {
-            [tableName]: generateDeleteRequestsForItems(allValues.Items),
-        },
-    };
+  const allValues = await dynamoDB.query(params).promise();
+  const batchParams = {
+    RequestItems: {
+      [tableName]: generateDeleteRequestsForItems(allValues.Items),
+    },
+  };
 
-    await dynamoDB.batchWrite(batchParams).promise();
+  await dynamoDB.batchWrite(batchParams).promise();
 
-    return response.output({}, 200);
+  return response.output({}, 200);
 };
 
 const createDocument = async (request, response) => {
-    const file = request.formData.files[0];
-    const { fields } = request.formData;
-    const fileId = generateID();
+  const file = request.formData.files[0];
+  const { fields } = request.formData;
+  const fileId = generateID();
 
-    await uploadFileToS3(fileId, file);
+  await uploadFileToS3(fileId, file);
 
-    const item = {
-        PK: fileId,
-        SK: 'Doc#Marketing',
-        DateUploaded: new Date().toISOString(),
-        FileDetails: {
-            encoding: file.encoding,
-            contentType: file.contentType,
-            fileName: file.fileName,
-        },
-        Owner: 'fc4cec10-6ae4-435c-98ca-6964382fee77', // Hard-coded until we put users in place
-        Name: fields.name,
-    };
+  const item = {
+    PK: fileId,
+    SK: 'Doc#Marketing',
+    DateUploaded: new Date().toISOString(),
+    FileDetails: {
+      encoding: file.encoding,
+      contentType: file.contentType,
+      fileName: file.fileName,
+    },
+    Owner: 'fc4cec10-6ae4-435c-98ca-6964382fee77', // Hard-coded until we put users in place
+    Name: fields.name,
+  };
 
-    // Add tags, if present
-    if (fields.tags && fields.tags.length > 0) {
-        item.Tags = fields.tags.split(',');
-    }
+  // Add tags, if present
+  if (fields.tags && fields.tags.length > 0) {
+    item.Tags = fields.tags.split(',');
+  }
 
-    // Insert into Database
-    const params = {
-        TableName: tableName,
-        Item: item,
-        ReturnValues: 'NONE',
-    };
+  // Insert into Database
+  const params = {
+    TableName: tableName,
+    Item: item,
+    ReturnValues: 'NONE',
+  };
 
-    await dynamoDB.put(params).promise();
+  await dynamoDB.put(params).promise();
 
-    return response.output('Document created', 200);
+  return response.output('Document created', 200);
 };
 
 //-------------------------
@@ -196,24 +197,26 @@ const router = createRouter(RouterType.HTTP_API_V2);
 router.add(Matcher.HttpApiV2('GET', '/documents/'), getAllDocuments);
 
 router.add(
-    Matcher.HttpApiV2('GET', '/documents(/:id)'),
-    validatePathVariables(schemas.idPathVariable),
-    getDocument,
+  Matcher.HttpApiV2('GET', '/documents(/:id)'),
+  validatePathVariables(schemas.idPathVariable),
+  getDocument,
 );
 
 router.add(
-    Matcher.HttpApiV2('DELETE', '/documents(/:id)'),
-    validatePathVariables(schemas.idPathVariable),
-    deleteDocument,
+  Matcher.HttpApiV2('DELETE', '/documents(/:id)'),
+  enforceGroupMembership(['admin', 'contributor']),
+  validatePathVariables(schemas.idPathVariable),
+  deleteDocument,
 );
 
 router.add(
-    Matcher.HttpApiV2('POST', '/documents/'),
-    parseMultipartFormData,
-    validateMultipartFormData(schemas.createDocument),
-    createDocument,
+  Matcher.HttpApiV2('POST', '/documents/'),
+  enforceGroupMembership(['admin', 'contributor']),
+  parseMultipartFormData,
+  validateMultipartFormData(schemas.createDocument),
+  createDocument,
 );
 
 exports.handler = async (event, context) => {
-    return router.run(event, context);
+  return router.run(event, context);
 };
