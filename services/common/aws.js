@@ -51,7 +51,7 @@ let _textract;
  * @returns {object} Textract client
  */
 const textract = () => {
-  if(!_textract) {
+  if (!_textract) {
     _textract = new AWS.Textract();
   }
 
@@ -66,7 +66,7 @@ let _ses;
  * @returns {object} Simple Email Service client
  */
 const ses = () => {
-  if(!_ses) {
+  if (!_ses) {
     _ses = new AWS.SES();
   }
 
@@ -81,11 +81,25 @@ let _eventBridge;
  * @returns {object} EventBridge client
  */
 const eventBridge = () => {
-  if(!_eventBridge) {
+  if (!_eventBridge) {
     _eventBridge = new AWS.EventBridge();
   }
 
   return _eventBridge;
+};
+
+let _cisp;
+
+/**
+ * Creates the Cognito Identity Service Provider client for use in the application.
+ *
+ * @returns {object} Cognito Identity Service Provider Client
+ */
+const cisp = () => {
+  if (!_cisp) {
+    _cisp = new AWS.CognitoIdentityServiceProvider();
+  }
+  return _cisp;
 };
 
 export const AWSClients = {
@@ -94,4 +108,5 @@ export const AWSClients = {
   textract,
   ses,
   eventBridge,
+  cisp,
 };
