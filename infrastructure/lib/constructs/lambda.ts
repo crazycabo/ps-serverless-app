@@ -11,8 +11,11 @@ export class NodejsServiceFunction extends NodejsFunction {
     const bundling = {
       externalModules: ['aws-sdk'],
     };
+    const tracing = lambda.Tracing.ACTIVE;
+
     super(scope, id, {
       ...props,
+      tracing,
       runtime,
       handler,
       bundling,
