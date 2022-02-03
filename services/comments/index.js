@@ -52,7 +52,7 @@ const getAllCommentsForDocument = async (request, response) => {
 
 // Creates a new comment for a document
 const createComment = async (request, response) => {
-  const userId = 'fc4cec10-6ae4-435c-98ca-6964382fee77'; // Hard-coded until we put users in place
+  const userId = request.event.requestContext.authorizer.jwt.claims.username;
   const commentId = `Comment#${generateID()}`;
   const item = {
     PK: request.pathVariables.docid,
@@ -112,13 +112,13 @@ const deleteComment = async (request, response) => {
 
 /*
 
-  This uses a custom Lambda container that I have created that is very 
+  This uses a custom Lambda container that I have created that is very
   similar to what I use for my projects in production (with the only
   exception being that it is JavaScript and not TypeScript). I have
   released this as an npm package, lambda-micro, and you can view it
   at the link below.
 
-  This is similar to what you can do with something like Express, but it 
+  This is similar to what you can do with something like Express, but it
   doesn't have the weight of using Express fully.
 
   https://github.com/davidtucker/lambda-micro
