@@ -1,4 +1,5 @@
 import * as cdk from '@aws-cdk/core';
+import * as iam from '@aws-cdk/aws-iam';
 import { ApplicationAPI } from './api';
 import { AppDatabase } from './database';
 import { AppServices } from './services';
@@ -8,6 +9,7 @@ import { ApplicationAuth } from "./auth";
 import { ApplicationMonitoring} from "./monitoring";
 import { DocumentProcessing } from "./processing";
 import { WebApp } from './webapp';
+import { PolicyStatement } from "@aws-cdk/aws-iam";
 
 export class ApplicationStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -16,6 +18,14 @@ export class ApplicationStack extends cdk.Stack {
     const storage = new AssetStorage(this, 'Storage');
     const database = new AppDatabase(this, 'Database');
     const auth = new ApplicationAuth(this, 'Auth');
+
+    const veryBadPolicy = new PolicyStatement({
+      principals: [new iam.AccountPrincipal(cdk.Stack.of(this).account)],
+      actions: ['*'],
+      resources: [storage.assetBucket.bucketArn]
+    })
+
+    storage.assetBucket.addToResourcePolicy(veryBadPolicy);
 
     const services = new AppServices(this, 'Services', {
       documentsTable: database.documentsTable,
