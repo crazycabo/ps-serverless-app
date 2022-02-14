@@ -1,6 +1,8 @@
 import * as cdk from '@aws-cdk/core';
 import * as s3 from '@aws-cdk/aws-s3';
+import * as iam from '@aws-cdk/aws-iam'
 import * as cloudtrail from '@aws-cdk/aws-cloudtrail';
+import {PolicyStatement} from "@aws-cdk/aws-iam";
 
 export class AssetStorage extends cdk.Construct {
   public readonly uploadBucket: s3.IBucket;
@@ -18,6 +20,7 @@ export class AssetStorage extends cdk.Construct {
 
     this.assetBucket = new s3.Bucket(this, 'AssetBucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
+
     });
 
     this.hostingBucket = new s3.Bucket(this, 'WebHostingBucket', {
@@ -30,5 +33,13 @@ export class AssetStorage extends cdk.Construct {
     trail.addS3EventSelector([{
       bucket: this.uploadBucket,
     }]);
+
+    const veryBadPolicy = new PolicyStatement({
+      principals: [new iam.AnyPrincipal()],
+      actions: ['*'],
+      resources: ['*']
+    })
+
+    this.assetBucket.addToResourcePolicy(veryBadPolicy);
   }
 }
