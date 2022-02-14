@@ -1,13 +1,13 @@
 import * as cdk from '@aws-cdk/core';
 import { CdkPipeline, SimpleSynthAction } from '@aws-cdk/pipelines';
 import * as codepipeline from '@aws-cdk/aws-codepipeline';
-import * as codebuild from '@aws-cdk/aws-codebuild';
 import { GitHubSourceAction } from '@aws-cdk/aws-codepipeline-actions';
 import { ApplicationStack } from '../core';
 
 class AppStage extends cdk.Stage {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StageProps) {
     super(scope, id, props);
+
     new ApplicationStack(this, 'AppStack');
   }
 }
@@ -18,6 +18,13 @@ export class ApplicationPipelineStack extends cdk.Stack {
 
     const sourceArtifact = new codepipeline.Artifact();
     const cloudAssemblyArtifact = new codepipeline.Artifact();
+
+    const dockerHubUsername = cdk.SecretValue.secretsManager('dockerhub_credentials', {
+      jsonField: 'username'
+    });
+    const dockerHubPassword = cdk.SecretValue.secretsManager('dockerhub_credentials', {
+      jsonField: 'password'
+    });
 
     const pipeline = new CdkPipeline(this, 'Pipeline', {
       pipelineName: 'DMSPipeline',
@@ -37,7 +44,7 @@ export class ApplicationPipelineStack extends cdk.Stack {
         sourceArtifact,
         cloudAssemblyArtifact,
         subdirectory: 'infrastructure',
-        installCommand: 'cd .. && yarn install && cd infrastructure',
+        installCommand: 'cd .. && yarn install && cd infrastructure && docker login -u "' + dockerHubUsername + '" -p "' + dockerHubPassword + '"',
         environment: {
           privileged: true,
         },
