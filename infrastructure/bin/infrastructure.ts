@@ -4,4 +4,4 @@ import * as cdk from '@aws-cdk/core';
 import { ApplicationStack } from '../lib/core';
 
 const app = new cdk.App();
-new ApplicationStack(app, 'poc-doc-service-cobra');
+new ApplicationStack(app, 'globomantics-serverless-react');

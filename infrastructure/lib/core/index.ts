@@ -5,6 +5,7 @@ import { AppServices } from './services';
 import { AssetStorage } from './storage';
 import { ApplicationEvents } from "./events";
 import { ApplicationAuth } from "./auth";
+import { ApplicationMonitoring} from "./monitoring";
 import { DocumentProcessing } from "./processing";
 import { WebApp } from './webapp';
 
@@ -50,6 +51,16 @@ export class ApplicationStack extends cdk.Stack {
       httpApi: api.httpApi,
       userPool: auth.userPool,
       userPoolClient: auth.userPoolClient,
+    });
+
+    new ApplicationMonitoring(this, 'Monitoring', {
+      api: api.httpApi,
+      table: database.documentsTable,
+      processingStateMachine: processing.processingStateMachine,
+      assetsBucket: storage.assetBucket,
+      documentsService: services.documentsService,
+      commentsService: services.commentsService,
+      usersService: services.usersService,
     });
   }
 }

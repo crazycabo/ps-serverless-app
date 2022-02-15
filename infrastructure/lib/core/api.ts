@@ -33,7 +33,7 @@ export class ApplicationAPI extends cdk.Construct {
     // API Gateway ------------------------------------------------------
 
     this.httpApi = new apigw.HttpApi(this, 'HttpProxyApi', {
-      apiName: 'serverless-api',
+      apiName: 'globomantics',
       createDefaultStage: true,
       corsPreflight: {
         allowHeaders: ['Authorization', 'Content-Type', '*'],
