@@ -155,7 +155,7 @@ const createDocument = async (request, response) => {
       contentType: file.contentType,
       fileName: file.fileName,
     },
-    Owner: request.event.requestContext.authorizer.jwt.claims.username;
+    Owner: request.event.requestContext.authorizer.jwt.claims.username,
     Name: fields.name,
   };
 
